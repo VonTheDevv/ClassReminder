@@ -4,28 +4,28 @@ const path = require("path");
 const cron = require("node-cron");
 const moment = require("moment-timezone");
 
-// Configuration
+
 const PREFIX = "/";
 const TIMEZONE = "Asia/Manila";
 const PIO_ID = "100092567839096";
 const REPRESENTATIVE_ID = "100004919079151";
 const ADMINS = [PIO_ID, REPRESENTATIVE_ID];
-const AUTO_UNSEND_DELAY = 10 * 60 * 1000; // 10 minutes in milliseconds
-const HELP_UNSEND_DELAY = 5 * 60 * 1000; // 5 minutes in milliseconds (auto-unsend for /help)
+const AUTO_UNSEND_DELAY = 10 * 60 * 1000; 
+const HELP_UNSEND_DELAY = 5 * 60 * 1000; 
 
-// Bot join behavior
+
 const BOT_NICKNAME = "TASK SCHEDULER";
 const BOT_INTRO_NAME = "Mark";
 const BOT_CREATOR_NAME = "Von";
 
-// Confirmations (B4)
-const CONFIRM_TTL_MS = 10 * 60 * 1000; // 10 minutes
-const pendingActions = new Map(); // token -> { threadID, senderID, expiresAt, action }
 
-// Numbered activities view cache (D1)
-const lastActivitiesView = new Map(); // threadID -> { createdAt, items: [{num, id, shortId}] }
+const CONFIRM_TTL_MS = 10 * 60 * 1000; 
+const pendingActions = new Map(); 
 
-// Data file paths
+
+const lastActivitiesView = new Map(); 
+
+
 const SUBJECTS_FILE = "./data/subjects.json";
 const APPSTATE_FILE = "./appstate.json";
 const GROUP_THREADS_FILE = "./data/group_threads.json";
@@ -305,22 +305,22 @@ const RANDOM_ASK_NO_REPLY_LINES = [
   "baka nasa ibang dimension pa",
 ];
 
-const pogiThreadLocks = new Map(); // threadID -> { processing, activeUntil, token }
-const pogiPhotoBags = new Map(); // `${threadID}:${rarityKey}` -> remaining file paths
+const pogiThreadLocks = new Map(); 
+const pogiPhotoBags = new Map(); 
 const phraseShuffleBags = new Map();
-const unknownCommandSpamHits = new Map(); // threadID -> timestamps[]
-const unknownCommandCooldowns = new Map(); // threadID -> until
-const unknownCommandReplyTargets = new Map(); // messageID -> expiresAt
-const ltCooldowns = new Map(); // threadID -> until
-const userNameCache = new Map(); // senderID -> name
-const everyoneCallCooldowns = new Map(); // threadID -> until
-const randomAskCooldowns = new Map(); // threadID -> until
-const activeRandomAsks = new Map(); // threadID -> state
-const curseWarningCounts = new Map(); // `${threadID}:${senderID}` -> count
+const unknownCommandSpamHits = new Map(); 
+const unknownCommandCooldowns = new Map(); 
+const unknownCommandReplyTargets = new Map(); 
+const ltCooldowns = new Map(); 
+const userNameCache = new Map(); 
+const everyoneCallCooldowns = new Map(); 
+const randomAskCooldowns = new Map(); 
+const activeRandomAsks = new Map(); 
+const curseWarningCounts = new Map(); 
 
 let pogiStateCache = null;
 
-// Ensure reminders data directory exists
+
 if (!fs.existsSync(REMINDERS_DATA_DIR)) {
   fs.mkdirSync(REMINDERS_DATA_DIR, { recursive: true });
 }
@@ -333,18 +333,18 @@ if (!fs.existsSync(LT_DATA_DIR_ABS)) {
   fs.mkdirSync(LT_DATA_DIR_ABS, { recursive: true });
 }
 
-// Store per-group "no class today" overrides
+
 const NOCLASS_DATA_DIR = "./data/noclass";
 const EXAM_DATA_DIR = "./data/exams";
 
-// Schedule image path
+
 const SCHEDULE_IMAGE_PATH = "./data/schedule/sched.png";
 
-// /schedule anti-spam cooldown (per group)
-const SCHEDULE_COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes
-const scheduleCooldowns = new Map(); // threadID -> { until, textMessageID, imageMessageID }
 
-// Ensure noclass data directory exists
+const SCHEDULE_COOLDOWN_MS = 3 * 60 * 1000; 
+const scheduleCooldowns = new Map(); 
+
+
 if (!fs.existsSync(NOCLASS_DATA_DIR)) {
   fs.mkdirSync(NOCLASS_DATA_DIR, { recursive: true });
 }
@@ -353,31 +353,31 @@ if (!fs.existsSync(EXAM_DATA_DIR)) {
   fs.mkdirSync(EXAM_DATA_DIR, { recursive: true });
 }
 
-// Auto-unsend delay for reminder list
-const REMINDERLIST_UNSEND_DELAY = 30 * 60 * 1000; // 30 minutes
 
-// Ensure group data directory exists
+const REMINDERLIST_UNSEND_DELAY = 30 * 60 * 1000; 
+
+
 if (!fs.existsSync(GROUP_DATA_DIR)) {
   fs.mkdirSync(GROUP_DATA_DIR, { recursive: true });
 }
 
-// Legacy activities file path (for migration)
+
 const LEGACY_ACTIVITIES_FILE = "./data/activities.json";
 
-// Track groups that have been initialized this session
+
 const initializedGroups = new Set();
 
-// Track legacy data for migration to all groups
+
 let legacyActivitiesCache = null;
 
 
-// =====================
-// CLASS SCHEDULE (BSIT 1-8)
-// =====================
+
+
+
 const CLASS_SCHEDULE = [
-  // Monday
+  
   {
-    day: 1, // 1 = Monday
+    day: 1, 
     code: "FIL2",
     name: "Filipino sa Iba't Ibang Disiplina",
     instructor: "CARDANO, MARIE",
@@ -385,7 +385,7 @@ const CLASS_SCHEDULE = [
     endTime: "20:00",
     venue: "CAS 407"
   },
-  // Tuesday
+  
   {
     day: 2,
     code: "GE10",
@@ -404,7 +404,7 @@ const CLASS_SCHEDULE = [
     endTime: "20:00",
     venue: "CAS 310"
   },
-  // Wednesday
+  
   {
     day: 3,
     code: "CC3",
@@ -414,7 +414,7 @@ const CLASS_SCHEDULE = [
     endTime: "19:30",
     venue: "CAS-CL1"
   },
-  // Thursday
+  
   {
     day: 4,
     code: "NSTP2",
@@ -424,7 +424,7 @@ const CLASS_SCHEDULE = [
     endTime: "20:30",
     venue: "CAS 407"
   },
-  // Friday
+  
   {
     day: 5,
     code: "GE1",
@@ -443,7 +443,7 @@ const CLASS_SCHEDULE = [
     endTime: "20:30",
     venue: "CPAG 201"
   },
-  // Saturday
+  
   {
     day: 6,
     code: "PATHFit2",
@@ -476,15 +476,15 @@ const CLASS_ACTIVITY_SUBJECT_ALIASES = {
   MST4: ["LITE"],
 };
 
-// Track sent class reminders to prevent duplicates
-const sentClassReminders = new Map(); // key: "threadID:classCode:date:type" -> timestamp
+
+const sentClassReminders = new Map(); 
 
 
-// =====================
-// VISUAL FORMAT HELPERS
-// =====================
+
+
+
 const DIVIDER = "━━━━━━━━━━━━━";
-const THIN_DIVIDER = ""; // Removed for mobile readability (no more long separator lines)
+const THIN_DIVIDER = "";
 
 function truncateText(text, maxLen = 40) {
   if (!text) return "";
@@ -501,7 +501,6 @@ function titleCaseSlot(slot) {
 }
 
 function sectionHeader(title, subtitle = "") {
-  // Mobile-friendly: avoid long separator lines
   return subtitle ? `${title}
 ${subtitle}` : `${title}`;
 }
@@ -516,12 +515,7 @@ function getShortId(id) {
   return s.length <= 6 ? s : s.slice(-6);
 }
 
-// =====================
-// EASE-OF-USE HELPERS
-// (A1, A3, A4, A5, A6, A7, A9, B1, B2, B4, C4, C5, D1, D3)
-// =====================
 
-// (A3) Aliases
 const COMMAND_ALIASES = {
   add: "addact",
   create: "addact",
@@ -550,7 +544,7 @@ const COMMAND_ALIASES = {
   rmreminder: "removereminder",
 };
 
-// (A4) Flexible separators: treat "_" and "-" like spaces for matching.
+
 function normalizeKey(str) {
   return String(str || "")
     .toLowerCase()
@@ -559,7 +553,6 @@ function normalizeKey(str) {
     .trim();
 }
 
-// (A1) Quotes support in command parsing
 function tokenizeCommand(input) {
   const s = String(input || "").trim();
   const out = [];
@@ -610,7 +603,6 @@ function tokenizeCommand(input) {
   return out;
 }
 
-// (C4) Subject suggestions - Levenshtein
 function levenshtein(a, b) {
   const s = String(a || "");
   const t = String(b || "");
@@ -651,7 +643,6 @@ function suggestClosestSubject(input, subjects) {
   return null;
 }
 
-// (A6, A5) Natural dates + more formats
 function parseNaturalDate(text) {
   const now = getCurrentTime();
   const raw = String(text || "").trim();
@@ -743,7 +734,7 @@ function findDateSegment(args, startIndex = 0) {
   return null;
 }
 
-// (A7) Time shortcuts
+
 function parseFlexibleTime(input) {
   const raw = String(input || "").trim();
   if (!raw) return null;
@@ -841,7 +832,7 @@ function parseDateTimeFromParsedDate(dateMoment, timeStr) {
   return date;
 }
 
-// (A9) Duration parsing for extend: +2d, +3h, +30m
+
 function parseDurationToken(token) {
   const s = String(token || "").trim().toLowerCase();
   const m = s.match(/^\+(\d+)(d|h|m)$/);
@@ -863,7 +854,7 @@ function addDurationToDeadline(deadlineIso, duration) {
   return d;
 }
 
-// Confirmation utilities (B4)
+
 function makeConfirmToken() {
   return Math.random().toString(36).slice(2, 6).toUpperCase();
 }
@@ -901,7 +892,7 @@ function buildSubjectIndex(subjects) {
   return (subjects || []).map((s) => ({ raw: s, key: normalizeKey(s) }));
 }
 
-// Resolve activity from identifier: #N (D1), id:XXXX (B2), or by name/subject (B1)
+
 function resolveActivityIdentifier(threadID, activities, args) {
   if (!args || args.length === 0)
     return { error: "Missing activity identifier" };
@@ -1022,7 +1013,6 @@ function resolveActivityIdentifier(threadID, activities, args) {
   return { activity: filtered[0], consumed: 1 + subjectConsumed };
 }
 
-// (D3) Parse /activities args: filters + sort
 function parseActivitiesArgs(args) {
   const out = {
     timeframe: null,
@@ -1077,9 +1067,6 @@ function parseActivitiesArgs(args) {
   return out;
 }
 
-// =====================
-// GROUP THREAD STORAGE
-// =====================
 function loadJSON(filePath) {
   try {
     if (fs.existsSync(filePath)) {
@@ -1112,12 +1099,12 @@ function saveGroupThreads(threads) {
 
 let groupThreadIDs = getGroupThreads();
 
-// Per-group data functions
+
 function getGroupDataPath(threadID) {
   return `${GROUP_DATA_DIR}/${threadID}.json`;
 }
 
-// Default notification flags structure for 3x daily reminders
+
 function getDefaultNotificationFlags() {
   return {
     notifiedNextWeek: { morning: false, noon: false, evening: false },
@@ -2043,7 +2030,7 @@ function getFirstName(name) {
   return clean.split(/\s+/)[0] || clean;
 }
 
-// Greeting + welcome message (new feature)
+
 function getTimeGreeting() {
   const hour = getCurrentTime().hour();
   if (hour < 12) return "Good morning";
@@ -2061,9 +2048,9 @@ function buildWelcomeMessage() {
   );
 }
 
-// =====================
-// REMINDER HELPERS
-// =====================
+
+
+
 
 function getReminderDataPath(threadID) {
   return `${REMINDERS_DATA_DIR}/${threadID}.json`;
@@ -2093,13 +2080,13 @@ function formatReminderTime(hour, minute) {
 }
 
 function parseReminderArgs(args) {
-  // Expected: "Message" [Date] Time <true/false>
+  
   if (args.length < 2) return null;
 
   const message = args[0];
   const rest = args.slice(1);
 
-  // Last arg should be true/false
+  
   const lastArg = String(rest[rest.length - 1] || "").toLowerCase();
   let isRecurring = false;
 
@@ -2107,12 +2094,12 @@ function parseReminderArgs(args) {
     isRecurring = lastArg === "true";
     rest.pop();
   } else {
-    return null; // Must specify true/false
+    return null; 
   }
 
   if (rest.length === 0) return null;
 
-  // Try to find date segment
+  
   const dateSeg = findDateSegment(rest, 0);
   let date = null;
   let timeTokens = [];
@@ -2124,7 +2111,7 @@ function parseReminderArgs(args) {
     timeTokens = rest;
   }
 
-  // Parse time
+  
   const timeParsed = parseTimeFromTokens(timeTokens);
   if (!timeParsed) return null;
 
@@ -2265,7 +2252,7 @@ function isDeadlineIn2Days(deadline) {
   return deadlineMoment.isBetween(twoDaysFromNow, twoDaysFromNowEnd, "day", "[]");
 }
 
-// Helper function to send a simple message
+
 function sendSimpleMessage(api, threadID, messageBody) {
   return new Promise((resolve) => {
     api.sendMessage(messageBody, threadID, (err, messageInfo) => {
@@ -3229,7 +3216,7 @@ async function maybeHandleLaughTrigger(api, event) {
   return true;
 }
 
-// Helper: match subject from args between [start, end)
+
 function findSubjectMatchFromTokens(tokens, subjects) {
   const idx = buildSubjectIndex(subjects);
   const joined = tokens.join(" ");
@@ -3248,7 +3235,7 @@ function findSubjectMatchFromTokens(tokens, subjects) {
   return best;
 }
 
-// Batch addact helper function (returns result instead of sending message)
+
 function executeBatchAddact(args, senderID, threadID) {
   if (args.length < 3) {
     return {
@@ -3344,9 +3331,9 @@ function executeBatchAddact(args, senderID, threadID) {
   return { success: true, activityName: getActivityDisplayName(activityName) };
 }
 
-// =====================
-// COMMAND HANDLERS
-// =====================
+
+
+
 const commands = {
   help: {
     description: "Show all available commands",
@@ -3860,7 +3847,7 @@ const commands = {
         return;
       }
 
-      // Duration mode (+2d/+3h/+30m)
+      
       const dur = parseDurationToken(rest[0]);
       let newDeadlineMoment = null;
       let newTimeString = act.time || null;
@@ -3876,7 +3863,7 @@ const commands = {
           newTimeString = moved.clone().format("h:mm A");
         }
       } else {
-        // Date/time mode
+        
         const dateSeg = findDateSegment(rest, 0);
         if (!dateSeg) {
           api.sendMessage(
@@ -3923,7 +3910,7 @@ const commands = {
         refreshed[idx].extendedBy = event.senderID;
         refreshed[idx].extendedAt = getCurrentTime().toISOString();
 
-        // Reset flags (same logic as your original extend command)
+        
         const resetFlags = getDefaultNotificationFlags();
         refreshed[idx].notifiedNextWeek = resetFlags.notifiedNextWeek;
         refreshed[idx].notifiedThisWeek = resetFlags.notifiedThisWeek;
@@ -4036,7 +4023,7 @@ listsub: {
       return;
     }
 
-    // ✅ REMOVED divider and spacing between subjects
+    
     let message = "📚 ACTIVE SUBJECTS\n\n";
     subjects.forEach((sub, index) => {
       message += `${index + 1}. ${sub}\n`;
@@ -4062,7 +4049,7 @@ noclass: {
     const threadID = event.threadID;
     const noClassSet = getNoClassSetForDate(threadID, todayDate);
 
-    // Show usage + today's classes (with numbers)
+    
     if (!args || args.length === 0) {
       let msg = `⚠️ Usage: ${PREFIX}noclass <#>\n\n`;
       msg += `Today's Classes:\n\n`;
@@ -4080,7 +4067,7 @@ noclass: {
       return;
     }
 
-    // Parse numbers (supports: "2" or "2 3" or "2,3")
+    
     const parts = args.join(" ").split(/[\s,]+/).filter(Boolean);
     const nums = parts.map((p) => parseInt(p, 10)).filter((n) => Number.isInteger(n));
 
@@ -4140,7 +4127,7 @@ noclass: {
         return;
       }
 
-      // Added spacing between list items (per your request)
+      
       let message = "📢 TRACKED GROUPS\n";
       message += "━".repeat(25) + "\n\n";
       message += `Total: ${groupThreadIDs.size} group(s)\n\n`;
@@ -4351,7 +4338,7 @@ Please try again in ${mins}m ${secs}s.`,
           threadID,
           (err, messageInfo) => {
             if (err || !messageInfo || !messageInfo.messageID) return;
-            // Auto-clean the "unavailable" notice shortly to keep chat tidy
+            
             setTimeout(() => {
               api.unsendMessage(messageInfo.messageID, () => {});
             }, 15000);
@@ -4387,7 +4374,7 @@ Please try again in ${mins}m ${secs}s.`,
         const sub = args && args[0] ? String(args[0]).toLowerCase() : "";
         const isOffline = sub === "offline";
 
-        // /schedule offline -> send text schedule
+        
         if (isOffline) {
           const scheduleText = buildFullScheduleText();
           const textInfo = await sendSimpleMessage(api, threadID, scheduleText);
@@ -4398,9 +4385,9 @@ Please try again in ${mins}m ${secs}s.`,
           return;
         }
 
-        // /schedule -> send photo schedule (with reminder)
+        
         if (!fs.existsSync(SCHEDULE_IMAGE_PATH)) {
-          // If image is missing, don't lock the command for 3 minutes
+          
           scheduleCooldowns.delete(threadID);
           await sendSimpleMessage(
             api,
@@ -4482,20 +4469,15 @@ Please try again in ${mins}m ${secs}s.`,
   },
 };
 
-// =====================
-// CLASS SCHEDULE HELPERS
-// =====================
 
-// Get today's classes
 function getTodaysClasses(now) {
-  const currentDay = now.day(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  const currentDay = now.day();
   return CLASS_SCHEDULE
     .filter((cls) => cls.day === currentDay)
     .sort((a, b) => String(a.startTime).localeCompare(String(b.startTime)));
 }
 
 
-// Build full weekly schedule text
 function buildFullScheduleText() {
   const dayNames = {
     1: "Monday",
@@ -4540,9 +4522,9 @@ function buildFullScheduleText() {
   return message;
 }
 
-// =====================
-// NO CLASS OVERRIDES (per-group, per-day)
-// =====================
+
+
+
 function getNoClassFile(threadID) {
   return `${NOCLASS_DATA_DIR}/${threadID}.json`;
 }
@@ -4563,7 +4545,7 @@ function saveNoClassSetForDate(threadID, dateKey, noClassSet) {
 }
 
 
-// Calculate class duration in hours
+
 function getClassDuration(startTime, endTime) {
   const [startHour, startMin] = startTime.split(':').map(Number);
   const [endHour, endMin] = endTime.split(':').map(Number);
@@ -4574,7 +4556,7 @@ function getClassDuration(startTime, endTime) {
   return hours;
 }
 
-// Format class time for display
+
 function formatClassTime(timeStr) {
   const [hour, minute] = timeStr.split(':').map(Number);
   const period = hour >= 12 ? 'PM' : 'AM';
@@ -4582,7 +4564,7 @@ function formatClassTime(timeStr) {
   return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
 }
 
-// Check if it's time to send a class reminder
+
 function shouldSendClassReminder(now, classItem, reminderType, threadID) {
   const dateKey = now.format('YYYY-MM-DD');
   const reminderKey = `${threadID}:${classItem.code}:${dateKey}:${reminderType}`;
@@ -4598,7 +4580,7 @@ function shouldSendClassReminder(now, classItem, reminderType, threadID) {
   
   let shouldSend = false;
   
-  // ✅ EXACT MATCHING - No ranges!
+  
   if (reminderType === '1hour' && minutesUntilClass === 60) {
     shouldSend = true;
   } else if (reminderType === '15min' && minutesUntilClass === 15) {
@@ -4610,7 +4592,7 @@ function shouldSendClassReminder(now, classItem, reminderType, threadID) {
   if (shouldSend) {
     sentClassReminders.set(reminderKey, Date.now());
     
-    // Clean up old entries
+    
     const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
     for (const [key, timestamp] of sentClassReminders.entries()) {
       if (timestamp < oneDayAgo) {
@@ -4622,7 +4604,7 @@ function shouldSendClassReminder(now, classItem, reminderType, threadID) {
   return shouldSend;
 }
 
-// Format class reminder message
+
 function formatClassReminder(classItem, reminderType, examLabels = []) {
   const duration = getClassDuration(classItem.startTime, classItem.endTime);
   const startTime = formatClassTime(classItem.startTime);
@@ -4653,7 +4635,7 @@ ${examLines}📚 ${classItem.code} - ${classItem.name}
 Stay safe - Von`;
 }
 
-// Format morning schedule overview
+
 function formatMorningSchedule(now, classes, noClassSet = new Set()) {
   const dateStr = now.format('dddd, MMM D');
   
@@ -4679,12 +4661,12 @@ function formatMorningSchedule(now, classes, noClassSet = new Set()) {
   return message;
 }
 
-// =====================
-// SCHEDULED TASKS (unchanged logic)
-// =====================
+
+
+
 function setupScheduledTasks(api) {
   let lastMotivationalTimeSlot = "";
-  let sentMorningScheduleToday = null; // Track date when morning schedule was sent
+  let sentMorningScheduleToday = null;
 
   function getCurrentSlot(hour, minute) {
     if (hour === 8 && minute === 0) return "morning";
@@ -4711,9 +4693,9 @@ function setupScheduledTasks(api) {
 
     const groupsWithReminders = new Set();
 
-// =====================
-    // REMINDER CHECKER (AT THE END, BEFORE CLOSING BRACKET)
-    // =====================
+
+    
+    
     const currentDate = now.format("YYYY-MM-DD");
     
     console.log(`🔔 Checking reminders at ${currentHour}:${currentMinute} on ${currentDate}`);
@@ -4761,11 +4743,11 @@ function setupScheduledTasks(api) {
     });
 
 
-// =====================
-// CLASS SCHEDULE REMINDERS
-// =====================
 
-// Send morning schedule overview at 6:00 AM
+
+
+
+
 if (currentHour === 6 && currentMinute === 0 && sentMorningScheduleToday !== todayDate) {
   const todaysClasses = getTodaysClasses(now);
 
@@ -4781,10 +4763,10 @@ if (currentHour === 6 && currentMinute === 0 && sentMorningScheduleToday !== tod
   }
 }
 
-// Check for class reminders (1 hour, 15 minutes, at start)
+
 const todaysClasses = getTodaysClasses(now);
 
-// ✅ LOOP THROUGH THREADS FIRST, THEN CLASSES
+
 for (const threadID of groupThreadIDs) {
   const noClassSet = getNoClassSetForDate(threadID, todayDate);
   const examState = getGroupExamState(threadID);
@@ -4794,22 +4776,22 @@ for (const threadID of groupThreadIDs) {
 
     const examLabels = getActiveExamLabelsForClass(examState, now, classItem);
 
-    // 1 hour before reminder
-    if (shouldSendClassReminder(now, classItem, '1hour', threadID)) { // ✅ PASS threadID
+    
+    if (shouldSendClassReminder(now, classItem, '1hour', threadID)) { 
       const message = formatClassReminder(classItem, '1hour', examLabels);
       await sendSimpleMessage(api, threadID, message);
       console.log(`📢 [${threadID}] Sent 1-hour reminder for ${classItem.code}`);
     }
     
-    // 15 minutes before reminder
-    if (shouldSendClassReminder(now, classItem, '15min', threadID)) { // ✅ PASS threadID
+    
+    if (shouldSendClassReminder(now, classItem, '15min', threadID)) { 
       const message = formatClassReminder(classItem, '15min', examLabels);
       await sendSimpleMessage(api, threadID, message);
       console.log(`📢 [${threadID}] Sent 15-min reminder for ${classItem.code}`);
     }
     
-    // At start time reminder
-    if (shouldSendClassReminder(now, classItem, 'start', threadID)) { // ✅ PASS threadID
+    
+    if (shouldSendClassReminder(now, classItem, 'start', threadID)) { 
       const message = formatClassReminder(classItem, 'start', examLabels);
       await sendSimpleMessage(api, threadID, message);
       console.log(`📢 [${threadID}] Sent start reminder for ${classItem.code}`);
@@ -4996,7 +4978,7 @@ for (const threadID of groupThreadIDs) {
         }
       }
 
-      // Send consolidated reminder message (same structure as your prior version)
+      
       const sections = [];
       const slotLabel = currentSlotName ? ` • ${titleCaseSlot(currentSlotName)}` : "";
 
@@ -5120,7 +5102,7 @@ for (const threadID of groupThreadIDs) {
   console.log(`📅 Class schedule reminders enabled for BSIT 1-8`);
 }
 
-// Scan all groups and initialize their data on startup
+
 function scanAndInitializeGroups(api) {
   console.log("🔍 Scanning groups and initializing data...");
 
@@ -5149,7 +5131,7 @@ function scanAndInitializeGroups(api) {
   });
 }
 
-// Main Bot Login
+
 function startBot() {
   const appState = loadJSON(APPSTATE_FILE);
 
@@ -5195,7 +5177,7 @@ function startBot() {
         return;
       }
 
-      // Track ALL group thread IDs for notifications and initialize data
+      
       if (event.isGroup && event.threadID) {
         const isNewGroup = !groupThreadIDs.has(event.threadID);
         if (isNewGroup) {
@@ -5210,7 +5192,7 @@ function startBot() {
         }
       }
 
-      // ✅ NEW FEATURE: When bot is added to a new group, set nickname + send welcome message
+      
       if (event.type === "event" && event.logMessageType === "log:subscribe") {
         const addedParticipants = event.logMessageData?.addedParticipants || [];
         const botWasAdded = addedParticipants.some((p) => String(p.userFbId) === String(botID));
@@ -5232,13 +5214,13 @@ function startBot() {
               console.log(`✅ Nickname set to "${BOT_NICKNAME}" in group ${event.threadID}`);
             }
 
-            // Send welcome message (even if nickname change fails)
+            
             sendSimpleMessage(api, event.threadID, buildWelcomeMessage());
           });
         }
       }
 
-      // Only process message events
+      
       if (!["message", "message_reply"].includes(event.type) || !event.body) return;
 
       const body = String(event.body || "").trim();
@@ -5278,7 +5260,6 @@ function startBot() {
         return;
       }
 
-      // Batch mode
       if (lines.length > 1) {
         let successCount = 0;
         let failCount = 0;
@@ -5332,7 +5313,7 @@ function startBot() {
           }
         }
 
-        // Added spacing between results (per your request)
+        
         let summary = `📋 Batch Command Results\n`;
         summary += `━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
         summary += results.join("\n\n");
@@ -5343,7 +5324,7 @@ function startBot() {
         return;
       }
 
-      // Single command mode
+      
       const raw = lines[0].slice(PREFIX.length).trim();
       const tokens = tokenizeCommand(raw);
       const rawCmd = (tokens.shift() || "").toLowerCase();
@@ -5381,7 +5362,6 @@ function startBot() {
   });
 }
 
-// Start the bot
 console.log("🚀 Facebook Messenger Agenda Bot");
 console.log("================================");
 startBot();
