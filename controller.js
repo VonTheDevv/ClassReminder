@@ -1,16 +1,16 @@
-// controller.js
-// Discord controller bot that manages your FB bot (index.js)
-//
-// Commands:
-// /uptime  - show controller + FB bot uptime
-// /status  - probe whether appstate.json still works
-// /replace - replace appstate.json (upload file or paste JSON) + restart FB bot
-// /restart - restart FB bot
-//
-// Requirements:
-// - Node 18+ (recommended)
-// - npm i discord.js
-// - npm i @dongdev/fca-unofficial   (already required by your FB bot)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const fs = require("fs");
 const path = require("path");
@@ -18,7 +18,7 @@ const { spawn } = require("child_process");
 
 const { Client, GatewayIntentBits, SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
 
-// Optional dotenv: only DISCORD_TOKEN needed; safe even if you don't install dotenv.
+
 try { require("dotenv").config(); } catch {}
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -27,10 +27,10 @@ if (!DISCORD_TOKEN) {
   process.exit(1);
 }
 
-// Same login lib as your FB bot (index.js)
+
 const login = require("@dongdev/fca-unofficial");
 
-// ---------- Paths ----------
+
 const FB_ENTRY = path.join(__dirname, "index.js");
 const APPSTATE_FILE = path.join(__dirname, "appstate.json");
 const BACKUP_DIR = path.join(__dirname, "appstate_backups");
@@ -38,7 +38,7 @@ const STATE_FILE = path.join(__dirname, "controller_state.json");
 
 if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
-// ---------- Controller State (for notifications) ----------
+
 function loadState() {
   try {
     return JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
@@ -53,21 +53,21 @@ function saveState(s) {
 }
 const state = loadState();
 
-// ---------- Fetch helper (Node 18 has global fetch) ----------
+
 async function fetchText(url) {
   if (typeof fetch === "function") {
     const r = await fetch(url);
     return await r.text();
   }
-  // Fallback if you’re on older Node:
+  
   const nodeFetch = require("node-fetch");
   const r = await nodeFetch(url);
   return await r.text();
 }
 
-// ---------- Utility ----------
+
 function nowStamp() {
-  // ISO but filesystem-safe
+  
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
@@ -81,7 +81,7 @@ function formatUptime(ms) {
 }
 
 function isAdminInteraction(interaction) {
-  // Private server = simplest: require Administrator permission
+  
   return interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
 }
 
@@ -92,7 +92,7 @@ function rememberNotifyTarget(interaction) {
   saveState(state);
 }
 
-// ---------- Discord notify ----------
+
 let client = null;
 
 async function notify(text) {
@@ -114,14 +114,14 @@ async function notify(text) {
   } catch {}
 }
 
-// ---------- FB bot process management ----------
+
 let fbProc = null;
 let fbStartedAt = null;
 let restarting = false;
 let replaceLock = false;
 
-const MIN_RUNTIME_MS = 60_000;       // if it dies within 60s, treat as "early exit"
-const RESTART_DELAY_MS = 5_000;      // delay before auto-restart (when allowed)
+const MIN_RUNTIME_MS = 60_000;       
+const RESTART_DELAY_MS = 5_000;      
 
 function isFbRunning() {
   return !!fbProc;
@@ -149,7 +149,7 @@ function startFbBot() {
     fbProc = null;
     fbStartedAt = null;
 
-    // Fire and forget async handling
+    
     void handleFbExit(code, signal, ranFor);
   });
 }
@@ -161,7 +161,7 @@ function stopFbBot() {
     fbProc.kill("SIGINT");
   } catch {}
 
-  // Force kill if it doesn't stop
+  
   const killTimer = setTimeout(() => {
     try { fbProc?.kill("SIGKILL"); } catch {}
   }, 4000);
@@ -185,10 +185,10 @@ function restartFbBot(reason = "manual restart") {
 async function handleFbExit(code, signal, ranForMs) {
   await notify(`🔴 FB bot stopped (code=${code ?? "?"}, signal=${signal ?? "?"}, ran=${Math.round(ranForMs / 1000)}s).`);
 
-  // Avoid auto-restart spam loops right after /replace, etc.
+  
   if (restarting) return;
 
-  // If it dies too fast, check appstate. If appstate is bad, do NOT restart-loop.
+  
   if (ranForMs < MIN_RUNTIME_MS) {
     const probe = await probeAppStateFromDisk(12_000);
     if (!probe.ok) {
@@ -197,11 +197,11 @@ async function handleFbExit(code, signal, ranForMs) {
     }
   }
 
-  // Otherwise restart after delay
+  
   setTimeout(() => startFbBot(), RESTART_DELAY_MS);
 }
 
-// ---------- appstate helpers ----------
+
 function loadAppStateFromDisk() {
   try {
     const raw = fs.readFileSync(APPSTATE_FILE, "utf8");
@@ -216,8 +216,8 @@ function looksLikeAppStateArray(v) {
 }
 
 function probeAppState(appState, timeoutMs = 12000) {
-  // Attempts login({ appState }) and resolves ok/failed.
-  // This does NOT auto-generate or refresh cookies; it only checks if current session works.
+  
+  
   return new Promise((resolve) => {
     let done = false;
     const t = setTimeout(() => {
@@ -238,7 +238,7 @@ function probeAppState(appState, timeoutMs = 12000) {
           return;
         }
 
-        // Best-effort logout (if supported)
+        
         try { api?.logout?.(); } catch {}
         resolve({ ok: true, reason: "ok" });
       });
@@ -257,7 +257,7 @@ async function probeAppStateFromDisk(timeoutMs = 12000) {
   return await probeAppState(appState, timeoutMs);
 }
 
-// ---------- Replace appstate ----------
+
 function backupAppStateIfExists() {
   if (!fs.existsSync(APPSTATE_FILE)) return null;
   const backupPath = path.join(BACKUP_DIR, `appstate.${nowStamp()}.json`);
@@ -271,7 +271,7 @@ function writeAppStateAtomic(jsonObj) {
   fs.renameSync(tmp, APPSTATE_FILE);
 }
 
-// ---------- Discord bot ----------
+
 async function registerCommandsEverywhere() {
   const commands = [
     new SlashCommandBuilder()
@@ -300,7 +300,7 @@ async function registerCommandsEverywhere() {
       .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   ].map(c => c.toJSON());
 
-  // Register to each guild the bot is in (fast updates)
+  
   const guilds = await client.guilds.fetch();
   for (const [guildId] of guilds) {
     const guild = await client.guilds.fetch(guildId).catch(() => null);
@@ -318,12 +318,12 @@ async function main() {
     await registerCommandsEverywhere();
     await notify("✅ Controller online. Use /status /replace /restart /uptime.");
 
-    // Start FB bot immediately
+    
     startFbBot();
   });
 
   client.on("guildCreate", async () => {
-    // If added to a new server, register commands there too
+    
     await registerCommandsEverywhere().catch(() => {});
   });
 
@@ -341,7 +341,7 @@ async function main() {
       });
     }
 
-    // Admin-only commands
+    
     if (!isAdminInteraction(interaction)) {
       return interaction.reply({ content: "Not allowed.", ephemeral: true });
     }
@@ -396,10 +396,10 @@ async function main() {
         const backupPath = backupAppStateIfExists();
         writeAppStateAtomic(parsed);
 
-        // Optional: immediately probe the new appstate before restarting
+        
         const probe = await probeAppState(parsed, 12_000);
         if (!probe.ok) {
-          // restore backup if available
+          
           if (backupPath && fs.existsSync(backupPath)) {
             fs.copyFileSync(backupPath, APPSTATE_FILE);
           }
